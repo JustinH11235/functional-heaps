@@ -1,0 +1,4 @@
+(executable
+ (public_name binary_heap)
+ (name main)
+ (libraries MyHeap))
