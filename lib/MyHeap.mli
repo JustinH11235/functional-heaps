@@ -18,6 +18,9 @@ module type HEAP = sig
   val top : t -> elem_t option
   val top_exn : t -> elem_t (* O(1) throws invalid arg if empty *)
   val length : t -> int
+
+  val mem :
+    elem_t -> t -> bool (* O(n) worst case, optimized to stop searching early*)
 end
 
 module Make (Ord : ORDERED_TYPE) : HEAP with type elem_t = Ord.t

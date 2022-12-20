@@ -25,6 +25,9 @@ module type HEAP = sig
   val top : t -> elem_t option (* O(1) *)
   val top_exn : t -> elem_t (* O(1) throws invalid arg if empty *)
   val length : t -> int (* O(n) *)
+
+  val mem :
+    elem_t -> t -> bool (* O(n) worst case, optimized to stop searching early*)
 end
 
 (* maybe in future we can also parametrize Make with a specific heap module,
@@ -36,8 +39,9 @@ module Make (Ord : ORDERED_TYPE) = struct
   type t = t_rec option
   and t_rec = { l : t; v : elem_t; r : t; hmin : int; hmax : int }
 
+  let ( =: ) a b = Ord.compare a b = 0
   let ( <: ) a b = Ord.compare a b < 0
-  (* let ( >: ) a b = Ord.compare a b > 0 *)
+  let ( >: ) a b = Ord.compare a b > 0
 
   (* let ( <=: ) a b = Ord.compare a b <= 0 *)
   (* let ( >=: ) a b = Ord.compare a b >= 0 *)
@@ -227,4 +231,12 @@ module Make (Ord : ORDERED_TYPE) = struct
         loop (v :: acc) (pop h)
     in
     List.rev @@ loop [] heap
+
+  let rec mem elem = function
+    | None -> false
+    | Some { l; v; r; _ } ->
+        if v =: elem then true
+        else if v >: elem then false
+        else if mem elem l then true
+        else mem elem r
 end
