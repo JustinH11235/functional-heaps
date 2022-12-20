@@ -220,11 +220,11 @@ module Make (Ord : ORDERED_TYPE) = struct
     loop [] heap
 
   let to_list_ordered heap =
-    let rec loop h acc =
+    let rec loop acc h =
       if is_empty h then acc
       else
         let v = top_exn heap in
-        loop (pop h) (v :: acc)
+        loop (v :: acc) (pop h)
     in
-    List.rev @@ loop heap []
+    List.rev @@ loop [] heap
 end
