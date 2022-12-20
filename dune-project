@@ -5,15 +5,15 @@
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github JustinH11235/functional-heaps))
 
-(authors "Author Name")
+(authors "Justin")
 
-(maintainers "Maintainer Name")
+(maintainers "Justin")
 
 (license LICENSE)
 
-(documentation https://url/to/documentation)
+(documentation https://github.com/JustinH11235/functional-heaps#readme)
 
 (package
  (name binary_heap)
