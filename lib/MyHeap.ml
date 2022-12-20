@@ -18,9 +18,12 @@ module type HEAP = sig
   val of_list :
     elem_t list -> t (* O(n)? Need to verify and get rid of split_n *)
 
+  val to_list : t -> elem_t list (* O(n) *)
+  val to_list_ordered : t -> elem_t list (* O(nlogn) *)
   val push : t -> elem_t -> t (* O(logn) *)
   val pop : t -> t (* O(logn) *)
   val top : t -> elem_t option (* O(1) *)
+  val top_exn : t -> elem_t (* O(1) throws invalid arg if empty *)
   val length : t -> int (* O(n) *)
 end
 
@@ -173,6 +176,9 @@ module Make (Ord : ORDERED_TYPE) = struct
 
   let top = value
 
+  let top_exn heap =
+    top heap |> function None -> invalid_arg "top_exn" | Some v -> v
+
   let rec length = function
     | Some { l; r; _ } -> length l + length r + 1
     | None -> 0
@@ -202,4 +208,23 @@ module Make (Ord : ORDERED_TYPE) = struct
         heap_down heap
 
   let of_list l = _of_list_unordered l |> _heapify
+
+  let to_list heap =
+    let rec loop acc = function
+      | None -> acc
+      | Some { l; v; r; _ } ->
+          let acc = v :: acc in
+          let acc = loop acc l in
+          loop acc r
+    in
+    loop [] heap
+
+  let to_list_ordered heap =
+    let rec loop h acc =
+      if is_empty h then acc
+      else
+        let v = top_exn heap in
+        loop (pop h) (v :: acc)
+    in
+    List.rev @@ loop heap []
 end

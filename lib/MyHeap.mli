@@ -11,9 +11,12 @@ module type HEAP = sig
   val is_empty : t -> bool
   val empty : t
   val of_list : elem_t list -> t
+  val to_list : t -> elem_t list (* O(n) *)
+  val to_list_ordered : t -> elem_t list (* O(nlogn) *)
   val push : t -> elem_t -> t
   val pop : t -> t
   val top : t -> elem_t option
+  val top_exn : t -> elem_t (* O(1) throws invalid arg if empty *)
   val length : t -> int
 end
 
