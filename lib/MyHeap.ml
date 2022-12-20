@@ -12,18 +12,21 @@ module type HEAP = sig
   type elem_t
   type t
 
-  val is_empty : t -> bool
-  val empty : t
+  val is_empty : t -> bool (* O(1) *)
+  val empty : t (* O(1) *)
 
-  (* val of_list : elem_t list -> t *)
-  val push : t -> elem_t -> t
-  val pop : t -> t
-  val top : t -> elem_t option
-  val length : t -> int
+  val of_list :
+    elem_t list -> t (* O(n)? Need to verify and get rid of split_n *)
+
+  val push : t -> elem_t -> t (* O(logn) *)
+  val pop : t -> t (* O(logn) *)
+  val top : t -> elem_t option (* O(1) *)
+  val length : t -> int (* O(n) *)
 end
 
 (* maybe in future we can also parametrize Make with a specific heap module,
-   or multiple classes with different properties, like one has O(1) length *)
+   or multiple classes with different properties, like one has O(1) length, or
+   a "printable" heap with formatter passed in *)
 module Make (Ord : ORDERED_TYPE) = struct
   type elem_t = Ord.t
 
@@ -82,12 +85,28 @@ module Make (Ord : ORDERED_TYPE) = struct
     match node with
     | Some { l; v; r; _ } -> (
         match l with
+        | Some { v = lv; _ } -> create_node (update_v l v) lv r
+        | None -> node)
+    | None -> None
+
+  let swap_r node =
+    match node with
+    | Some { l; v; r; _ } -> (
+        match r with
+        | Some { v = rv; _ } -> create_node l rv (update_v r v)
+        | None -> node)
+    | None -> None
+
+  let check_and_swap_l node =
+    match node with
+    | Some { l; v; r; _ } -> (
+        match l with
         | Some { v = lv; _ } ->
             if lv <: v then create_node (update_v l v) lv r else node
         | None -> node)
     | None -> None
 
-  let swap_r node =
+  let check_and_swap_r node =
     match node with
     | Some { l; v; r; _ } -> (
         match r with
@@ -98,25 +117,32 @@ module Make (Ord : ORDERED_TYPE) = struct
 
   let rec heap_down heap =
     match heap with
-    | Some { l; r; _ } -> (
+    | Some { l; r; v; _ } -> (
         match (l, r) with
-        | Some { v = lv; _ }, Some { v = rv; _ } -> (
+        | Some { v = lv; _ }, Some { v = rv; _ } ->
             if lv <: rv then
+              if lv <: v then
+                match swap_l heap with
+                | Some { l; _ } as heap -> update_l heap (heap_down l)
+                | None -> None
+              else heap
+            else if rv <: v then
+              match swap_r heap with
+              | Some { r; _ } as heap -> update_r heap (heap_down r)
+              | None -> None
+            else heap
+        | Some { v = lv; _ }, _ ->
+            if lv <: v then
               match swap_l heap with
               | Some { l; _ } as heap -> update_l heap (heap_down l)
               | None -> None
-            else
+            else heap
+        | _, Some { v = rv; _ } ->
+            if rv <: v then
               match swap_r heap with
               | Some { r; _ } as heap -> update_r heap (heap_down r)
-              | None -> None)
-        | Some _, _ -> (
-            match swap_l heap with
-            | Some { l; _ } as heap -> update_l heap (heap_down l)
-            | None -> None)
-        | _, Some _ -> (
-            match swap_r heap with
-            | Some { r; _ } as heap -> update_r heap (heap_down r)
-            | None -> None)
+              | None -> None
+            else heap
         | _ -> heap)
     | None -> None
 
@@ -128,8 +154,9 @@ module Make (Ord : ORDERED_TYPE) = struct
   let rec push heap elem =
     match heap with
     | Some { l; r; _ } ->
-        if height_min l = height_min r then swap_l (update_l heap (push l elem))
-        else swap_r (update_r heap (push r elem))
+        if height_min l = height_min r then
+          check_and_swap_l (update_l heap (push l elem))
+        else check_and_swap_r (update_r heap (push r elem))
     | None -> create_node None elem None
 
   (* traverse to the last filled node based on largest h,
@@ -149,4 +176,30 @@ module Make (Ord : ORDERED_TYPE) = struct
   let rec length = function
     | Some { l; r; _ } -> length l + length r + 1
     | None -> 0
+
+  let rec _of_list_unordered ?len = function
+    | [] -> None
+    | hd :: tl as l ->
+        let len = match len with None -> List.length l | Some len -> len in
+        let total_spots_last_level = Int.pow 2 (Int.floor_log2 (len + 1)) in
+        let num_filled = total_spots_last_level - 1 in
+        let num_extra = len - num_filled in
+        let half_of_last = total_spots_last_level / 2 in
+        let num_left =
+          ((num_filled - 1) / 2) + Int.min num_extra half_of_last
+        in
+        let left, right = List.split_n tl num_left in
+        create_node
+          (_of_list_unordered left ~len:num_left)
+          hd
+          (_of_list_unordered right ~len:(len - 1 - num_left))
+
+  let rec _heapify = function
+    | None -> None
+    | Some { l; r; _ } as heap ->
+        let heap = update_l heap (_heapify l) in
+        let heap = update_r heap (_heapify r) in
+        heap_down heap
+
+  let of_list l = _of_list_unordered l |> _heapify
 end

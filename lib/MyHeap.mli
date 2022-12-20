@@ -10,8 +10,7 @@ module type HEAP = sig
 
   val is_empty : t -> bool
   val empty : t
-
-  (* val of_list : elem_t list -> t *)
+  val of_list : elem_t list -> t
   val push : t -> elem_t -> t
   val pop : t -> t
   val top : t -> elem_t option
