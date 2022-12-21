@@ -14,10 +14,7 @@ module type HEAP = sig
 
   val is_empty : t -> bool (* O(1) *)
   val empty : t (* O(1) *)
-
-  val of_list :
-    elem_t list -> t (* O(n)? Need to verify and get rid of split_n *)
-
+  val of_list : elem_t list -> t (* O(n) *)
   val to_list : t -> elem_t list (* O(n) *)
   val to_list_ordered : t -> elem_t list (* O(nlogn) *)
   val push : t -> elem_t -> t (* O(logn) *)
