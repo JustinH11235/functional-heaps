@@ -187,22 +187,27 @@ module Make (Ord : ORDERED_TYPE) = struct
     | Some { l; r; _ } -> length l + length r + 1
     | None -> 0
 
-  let rec _of_list_unordered ?len = function
-    | [] -> None
-    | hd :: tl as l ->
-        let len = match len with None -> List.length l | Some len -> len in
-        let total_spots_last_level = Int.pow 2 (Int.floor_log2 (len + 1)) in
-        let num_filled = total_spots_last_level - 1 in
-        let num_extra = len - num_filled in
-        let half_of_last = total_spots_last_level / 2 in
-        let num_left =
-          ((num_filled - 1) / 2) + Int.min num_extra half_of_last
-        in
-        let left, right = List.split_n tl num_left in
-        create_node
-          (_of_list_unordered left ~len:num_left)
-          hd
-          (_of_list_unordered right ~len:(len - 1 - num_left))
+  let _of_list_unordered l =
+    (* returns (heap, unused remainder of list)*)
+    let rec loop len = function
+      | [] -> (None, [])
+      | hd :: tl as l ->
+          if len = 0 then (None, l)
+          else
+            let total_spots_last_level = Int.pow 2 (Int.floor_log2 (len + 1)) in
+            let num_filled = total_spots_last_level - 1 in
+            let num_extra = len - num_filled in
+            let half_of_last = total_spots_last_level / 2 in
+            let num_filled_for_left = (num_filled - 1) / 2 in
+            let num_last_level_for_left = Int.min num_extra half_of_last in
+            let num_for_left = num_filled_for_left + num_last_level_for_left in
+
+            let left, rem_l = loop num_for_left tl in
+            let right, rem_l = loop (len - 1 - num_for_left) rem_l in
+            (create_node left hd right, rem_l)
+    in
+    let heap, _ = loop (List.length l) l in
+    heap
 
   let rec _heapify = function
     | None -> None
