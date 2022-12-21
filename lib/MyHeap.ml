@@ -189,21 +189,22 @@ module Make (Ord : ORDERED_TYPE) = struct
 
   let _of_list_unordered l =
     (* returns (heap, unused remainder of list)*)
-    let rec loop len = function
+    let rec loop len ?(last_level = Int.pow 2 (Int.floor_log2 (len + 1))) =
+      function
       | [] -> (None, [])
       | hd :: tl as l ->
           if len = 0 then (None, l)
           else
-            let total_spots_last_level = Int.pow 2 (Int.floor_log2 (len + 1)) in
-            let num_filled = total_spots_last_level - 1 in
-            let num_extra = len - num_filled in
-            let half_of_last = total_spots_last_level / 2 in
-            let num_filled_for_left = (num_filled - 1) / 2 in
-            let num_last_level_for_left = Int.min num_extra half_of_last in
-            let num_for_left = num_filled_for_left + num_last_level_for_left in
+            let filled = last_level - 1 in
+            let extra = len - filled in
+            let filled_left = (filled - 1) / 2 in
+            let last_level_left = Int.min extra (last_level / 2) in
+            let for_left = filled_left + last_level_left in
 
-            let left, rem_l = loop num_for_left tl in
-            let right, rem_l = loop (len - 1 - num_for_left) rem_l in
+            let left, rem_l = loop for_left tl ~last_level:(last_level / 2) in
+            let right, rem_l =
+              loop (len - 1 - for_left) rem_l ~last_level:(last_level / 2)
+            in
             (create_node left hd right, rem_l)
     in
     let heap, _ = loop (List.length l) l in
